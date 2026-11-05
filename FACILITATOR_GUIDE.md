@@ -8,7 +8,7 @@ A 5 to 10 minute live demo. The audience watches Bob turn one prompt into a play
 |------|--------------|
 | 0:00 | Show the empty starter and `AGENTS.md` (the "contract" Bob reads) |
 | 0:30 | Paste the prompt from `DEMO_PROMPT.md`, press enter |
-| 0:30 to 5:00 | Bob plans, writes config, state, renderer, input; lint after each file; smoke test. Talk through the talking points below |
+| 0:30 to 5:00 | Bob plans, then writes config, state, renderer, input and reviews its own code. It runs no commands and asks nothing. Talk through the talking points below |
 | 5:00 | `uv run python main.py`, play live |
 | 6:00 | One follow-up prompt (see below) |
 
@@ -18,7 +18,7 @@ A 5 to 10 minute live demo. The audience watches Bob turn one prompt into a play
 2. **Logic and drawing are separate.** `state.py` never imports pygame, so particles and screen shake
    live in the state and the renderer only draws them.
 3. **Spec first.** The prompt fixes every number (gravity, gap, speed ramp, stages), so Bob does not guess.
-4. **Lint and smoke in the loop.** Bob checks itself with two scripts and never starts a blocking window.
+4. **Zero friction.** Bob runs no commands and needs no approvals: it reads the contract, writes the code and reviews it itself.
 5. **Prepared assets.** The official Bob artwork was added beforehand; Bob only uses it.
 
 ## Follow-up prompts (pick one, keep them short)
@@ -45,8 +45,8 @@ Add a "Made with Bob" text at the bottom of the screen. Renderer and config only
 
 | Issue | Fix |
 |-------|-----|
-| Bob waits for a click | An auto-approve switch is off. Turn on Read, Edit, Execute, Todo. Click once to continue. |
+| Bob waits for a click | An auto-approve switch is off. Turn on Read, Edit, Todo. Click once to continue. |
 | Bob asks a question | Answer briefly ("your choice") and continue. The prompt forbids questions, but models can slip. |
-| Bob tries `uv run python main.py` and hangs | Stop the command and tell Bob: "Use ./scripts/smoke.sh instead." |
+| Bob tries to run a command (it should not) | Decline it and tell Bob: "Run no commands. I start the game myself." |
 | Anything goes wrong | Say "here is one I prepared earlier" and run `cd ../flappy-bob-fallback && uv run python main.py` |
 | Need to run the demo again | `./scripts/reset.sh` |

@@ -12,22 +12,19 @@ only writes game logic, drawing and input. That is what keeps the run short.
 
 ## Checklist BEFORE the stage (tick once)
 
-Prepared state: `.venv` and `uv.lock` exist, `lint.sh` and `smoke.sh` are green on the empty
-starter, the assets are in place, a finished fallback game exists in `../flappy-bob-fallback`.
+Prepared state: `.venv` and `uv.lock` exist, the assets are in place, a finished fallback game
+exists in `../flappy-bob-fallback`. Bob runs NO commands in this demo (no scripts, no terminal),
+so the only thing you do is paste the prompt.
 
-- [ ] **Bob auto-approve** (bar above the input field): switch on **Read, Edit, Execute, Todo**.
-      For safety also **Skill, Subtask, Subagent, Mode**. For Execute, add an allow-list with
-      `./scripts/lint.sh --fix` and `./scripts/smoke.sh`. Without these switches Bob waits for a
-      click after every step. This is the most common showstopper.
+- [ ] **Bob auto-approve** (bar above the input field): switch on **Read, Edit, Todo**.
+      For safety also **Skill, Subtask, Subagent, Mode**. Leave **Execute** off: Bob must not need
+      it. Without these switches Bob waits for a click after every step. This is the most common
+      showstopper.
 - [ ] Open the folder `flappy-bob/` as the Bob workspace, mode **Agent**.
-- [ ] Check the starter (terminal in `flappy-bob/`):
-  ```bash
-  ./scripts/lint.sh       # must be green
-  ./scripts/smoke.sh      # must print "smoke OK"
-  ```
 - [ ] **Dry run with the real prompt** on a copy of the folder (`cp -R flappy-bob /tmp/flappy-bob-probe`
-      and open that). Time it (target: under 5 to 7 minutes) and watch for every click. Each click
-      you need is a missing auto-approve switch.
+      and open that). Time it (target: under 5 to 7 minutes), watch for every click, and start the
+      result once with `uv run python main.py` to see that it runs. Each click you need is a missing
+      auto-approve switch; any command Bob tries is a prompt bug.
 - [ ] **Reset the stage folder after a run** (restores `game/` and `main.py` from the backup
       folder `.starter/` inside this project; assets and docs stay):
   ```bash
@@ -47,20 +44,31 @@ Design and build "Flappy Bob": a Flappy Bird game where the bird is Bob, the IBM
 the hard hat. Work completely on your own and ask no questions. For open points make sensible
 assumptions and list them at the end in a short list.
 
+IMPORTANT: DO NOT ADD A TEXT BACKGROUND AT ALL. No background, box, panel, fill, outline, shadow or
+glow behind any text, anywhere, ever. Text is bare letters only.
+
 AUTONOMY (so nobody has to click)
 - Do not activate skills (also no brainstorming), use no MCP tools and no review tools, do not
   switch modes and do not start subagents.
 - Work only inside this workspace folder. Read and write nothing outside it.
-- Run shell commands one at a time, without &&, ;, pipes or cd. Only these are allowed:
-  `./scripts/lint.sh --fix` and `./scripts/smoke.sh`.
-- Install nothing (the environment is ready) and run no git commands.
+- Run NO commands at all: no shell, no scripts, no terminal, no installs, no git, no tests, and
+  never start the game. Nothing you do may need an approval. There is no way to run a check, so
+  write the code carefully and review it yourself once at the end (see CODE QUALITY).
 - Download, generate or convert no images. The artwork is already in assets/ and loaded.
 - Time budget: keep the implementation compact (about 700 lines in total, no features beyond this
   spec).
-- Do not hand-wrap long lines: `./scripts/lint.sh --fix` formats the code. Use only read_file,
-  write_file, apply_diff and search_and_replace, and always pass `path` to write_file.
-- Do not look into `.venv` (hidden, complete). If a script says "uv: command not found", the
-  script handles it: do not investigate and retry at most once.
+- Use only read_file, write_file, apply_diff and search_and_replace, and always pass `path` to
+  write_file. Do not look into `.venv`.
+
+CODE QUALITY (nothing will format or check your code, so get it right the first time)
+- Python 3.11+, fully type-annotated for mypy strict: annotate every function parameter, return
+  type (`-> None` included) and attribute; give list, dict and tuple types their element types.
+- ruff style: lines at most 100 characters, 4-space indent, double quotes, imports sorted (standard
+  library, blank line, third party, blank line, `game.*`), no unused imports or variables.
+- Define EVERY `GameConfig.X` constant in config.py before using it elsewhere, and spell it
+  identically everywhere. No magic numbers in state.py or renderer.py.
+- When all four files are written, re-read them once, fix any wrong name, missing constant, type
+  or import, and make sure the game cannot crash at start (Ready screen) or on restart.
 
 CONCEPT
 - Player = Bob. Use `self.sprite_bob` from Renderer.__init__ (assets/bob.png, already loaded,
@@ -87,13 +95,19 @@ CONCEPT
   red (250,77,86), text (244,244,244).
 - Layout (window 640 x 720 px): big score number top centre, below it "Bugs fixed   Best N".
   Ready screen: title in cyan, the full mascot `self.sprite_logo` (assets/logo.png, 155x240) in
-  the middle, the ready hint below it. Overlays for pause and game over: dark translucent layer.
+  the middle, the ready hint below it. Overlays for pause and game over: one dark translucent layer
+  over the WHOLE window (full width and height), nothing else.
+- TEXT HAS NO BACKGROUND (strict)
+
+  Never draw a rectangle, panel, box, pill, badge, bar, white or coloured fill, border, outline,
+  shadow or glow behind or around any text. Never pass a background colour to `font.render`
+  (always `font.render(text, True, color)` with exactly these three arguments). The only layer
+  that may sit behind text is the full-window dark layer of the pause and game-over screens.
 - TEXT MUST ALWAYS BE READABLE: draw ALL text last, after the world, the sprites, the logo and the
-  dark layer, so nothing covers it and the dark layer does not dim it. Give every text a dark
-  outline (draw it 5 times in black, offset 2 px, then the colour on top) through one helper
-  `_draw_text`. Every text must fit inside the window with a 24 px margin left and right; if a
-  line is wider, scale it down in that helper. Check the longest texts ("Deployment paused",
-  "Build failed!" at 48 px bold monospace).
+  dark layer, so nothing covers it and the dark layer does not dim it. Draw every text through one
+  helper `_draw_text` (anti-aliased, in its colour, blitted as it is). Every text must fit inside
+  the window with a 24 px margin left and right; if a line is wider, scale it down in that helper.
+  Check the longest texts ("Deployment paused", "Build failed!" at 48 px bold monospace).
 - Stage banner: while the state's `banner_time` is above 0 (and Playing), show the stage banner in
   cyan, 28 px, centred at y = 160, through `_draw_text`, after everything else.
 - Controls hint: while Ready and while Playing (not paused, not game over) always show
@@ -158,16 +172,15 @@ PROCEDURE
 2. Write a short plan (maximum 8 lines), then continue immediately, without waiting for approval.
 3. Order: config.py, state.py, renderer.py, input_handler.py. Define EVERY constant that state.py
    and renderer.py use in config.py first (e.g. MAX_DT), and write each file in one call.
-4. After each file run `./scripts/lint.sh --fix` and fix errors until it is green.
-5. At the end run `./scripts/smoke.sh` (headless, it returns) and fix until it prints
-   "smoke OK". Do NOT run `uv run python main.py`: the window would block you. I start the game
-   myself.
-6. Finish with 5 lines of summary, your assumptions, and how to play.
+4. Run no commands. When all four files are written, do the one self-review from CODE QUALITY.
+5. FINISH with 5 lines of summary, your assumptions, and how to play. Do not start the game, I
+   start it myself.
 ```
 
 ## After the run (live)
 
-1. Start `uv run python main.py` in the terminal and play. SPACE to flap.
+1. Start `uv run python main.py` in a terminal and play. SPACE to flap. (This is your only
+   command; Bob runs none.)
 2. If you notice something, give Bob one short correction. Examples:
    - "Add sound effects: a short blip on flap and a low buzz on game over. Use pygame.mixer and
      generate the tones in code so no files are needed."

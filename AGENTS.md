@@ -28,10 +28,7 @@ flappy-bob/
 │   ├── state.py             ← ALL mutable game data (bob, pipes, score, particles, timers)
 │   ├── renderer.py          ← ALL drawing code (never mutates state); sprites already loaded
 │   └── input_handler.py     ← ALL keyboard handling
-├── scripts/
-│   ├── lint.sh              ← ruff + mypy quality checks
-│   ├── smoke.sh             ← headless run of the real game loop (~3 s)
-│   └── run.sh / run.bat     ← Podman container launch (not used in the demo)
+├── scripts/                 ← for the human only. Bob does NOT run any of them.
 ├── Dockerfile
 └── pyproject.toml           ← uv / hatchling project config
 ```
@@ -54,14 +51,17 @@ flappy-bob/
   particles, screen-shake time, message text with remaining time. `renderer.py` only reads
   this state and draws it. It changes nothing.
 - All numbers, colours, text constants and sizes live in `config.py`.
+- Text has NO background: draw it as bare letters with `font.render(text, True, color)` (three
+  arguments, never a background colour). No box, panel, fill, border, outline, shadow or glow
+  behind any text. Only the pause and game-over screens may dim the whole window.
 - Only `input_handler.py` reads pygame events and the keyboard. It calls methods of `GameState`.
 - `main.py` calls `state.update(dt)` every frame. `GameState.update` must therefore return
   early while `paused`, and keep animating effects (particles, shake) while `game_over`.
 - `main.py` may be adjusted if the window size or loop requires it (ESC and window close
   already work).
 - Starter fields such as `level` and `lives` may be removed if the game does not need them.
-  `GameState` must keep `score`, `game_over`, `paused` and `restart()`, because `main.py`,
-  `input_handler.py` and `smoke.sh` use them.
+  `GameState` must keep `score`, `game_over`, `paused` and `restart()`, because `main.py` and
+  `input_handler.py` use them.
 
 ## Assets (already prepared, do not touch)
 
@@ -75,31 +75,28 @@ flappy-bob/
 
 ---
 
-## Checking your work without blocking
+## No commands (important)
 
-`uv run python main.py` opens a window and never returns. As an agent, **do not run it**.
-Instead, run these two commands, one per call:
+**Run no commands at all**: no shell, no scripts, no tests, no installs, no git, and never start
+the game (`uv run python main.py` opens a window and never returns). The human starts the game.
+Nothing may ask for an approval. Since nothing formats or checks your code, write it correctly the
+first time:
 
-```bash
-./scripts/lint.sh --fix     # ruff + mypy, formats automatically
-./scripts/smoke.sh          # runs the real game loop headless for ~3 s with simulated keys
-```
+- Fully type-annotated Python 3.11+ (mypy strict): every parameter, return type (`-> None`
+  included) and attribute, with element types on list, dict and tuple.
+- ruff style: lines at most 100 characters, 4-space indent, double quotes, sorted imports
+  (standard library, third party, `game.*`), no unused imports or variables.
+- Define every constant in `config.py` first, then write `state.py` and `renderer.py`. Re-check
+  that each `GameConfig.X` you use exists and is spelled identically.
+- When all files are written, re-read them once and fix wrong names, missing constants, types or
+  imports.
 
-Both must end with exit code 0 before a task counts as done. The environment (`.venv`) is
-already installed. Do not install anything and do not run git.
+## Working efficiently
 
-## Working efficiently (lessons from rehearsals)
-
-- **Do not hand-wrap long lines.** `./scripts/lint.sh --fix` runs `ruff format` (line length
-  100, E501 ignored). Just write the code and let the script format it.
-- **Define every constant in `config.py` first**, then write `state.py` and `renderer.py`.
-  Re-check that each `GameConfig.X` you use exists (for example `MAX_DT`).
 - **Write each file in ONE `write_file` call and always include `path`.** Use only
   `read_file`, `write_file`, `apply_diff` and `search_and_replace`. Do not invent tools.
   Search strings must not end with a stray newline.
 - **`.venv` is hidden and already complete.** Do not inspect it or glob for it.
-- **If a script prints "uv: command not found"**, the scripts already handle it (they fall
-  back to `.venv/bin`). Do not investigate, and do not retry more than once.
 - Keep the whole game compact, about 700 lines across `game/*.py`.
 
 ---
