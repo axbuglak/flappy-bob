@@ -100,7 +100,7 @@ already installed. Do not install anything and do not run git.
 - **`.venv` is hidden and already complete.** Do not inspect it or glob for it.
 - **If a script prints "uv: command not found"**, the scripts already handle it (they fall
   back to `.venv/bin`). Do not investigate, and do not retry more than once.
-- Keep the whole game compact, about 450 lines across `game/*.py`.
+- Keep the whole game compact, about 700 lines across `game/*.py`.
 
 ---
 

@@ -17,7 +17,7 @@ A 5 to 10 minute live demo. The audience watches Bob turn one prompt into a play
 1. **AGENTS.md is a contract.** Bob reads it every time. Good context means fewer questions and mistakes.
 2. **Logic and drawing are separate.** `state.py` never imports pygame, so particles and screen shake
    live in the state and the renderer only draws them.
-3. **Spec first.** The prompt fixes every number (gravity, gap, speed), so Bob does not guess.
+3. **Spec first.** The prompt fixes every number (gravity, gap, speed ramp, stages), so Bob does not guess.
 4. **Lint and smoke in the loop.** Bob checks itself with two scripts and never starts a blocking window.
 5. **Prepared assets.** The official Bob artwork was added beforehand; Bob only uses it.
 
@@ -33,8 +33,8 @@ Save the best score in a file .highscore in the project root and load it on star
 ```
 
 ```
-Night mode: after 10 points the background gets darker and the rack LEDs blink faster.
-All numbers in config.py, timers in state.py.
+Add a "Stage clear" sound: three rising beeps when a new stage starts.
+Use pygame.mixer, generate the tones in code. Constants in config.py.
 ```
 
 ```

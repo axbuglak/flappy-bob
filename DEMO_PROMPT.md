@@ -55,7 +55,8 @@ AUTONOMY (so nobody has to click)
   `./scripts/lint.sh --fix` and `./scripts/smoke.sh`.
 - Install nothing (the environment is ready) and run no git commands.
 - Download, generate or convert no images. The artwork is already in assets/ and loaded.
-- Time budget: keep the implementation compact (about 450 lines in total, no extra features).
+- Time budget: keep the implementation compact (about 700 lines in total, no features beyond this
+  spec).
 - Do not hand-wrap long lines: `./scripts/lint.sh --fix` formats the code. Use only read_file,
   write_file, apply_diff and search_and_replace, and always pass `path` to write_file.
 - Do not look into `.venv` (hidden, complete). If a script says "uv: command not found", the
@@ -66,13 +67,22 @@ CONCEPT
   64x61 px). Tilt it with pygame.transform.rotate: nose up while rising, down while falling.
 - Pipes = server racks: dark body with a blue edge, rows of small rack units with a LED each that
   blinks (green / dark green, driven by the state's time), and a blue lip at the gap end.
-- Background: vertical gradient from near black (22,22,22) at the top to deep purple (44,26,96) at
-  the bottom, with a few faint code tokens ("</>", "{ }", "01", "fn()", "=>") that scroll slowly
-  (parallax, 25 % of the pipe speed). Build the gradient once in the renderer, not every frame.
+- Background: a vertical gradient per stage (see STAGES) plus 3 parallax layers on top, each built
+  ONCE in the renderer as a transparent surface twice the window width (paint everything at x and
+  x + 640 so it scrolls seamlessly; offset = scroll * factor % 640):
+  * far, factor 0.08: 40 tiny stars (1 to 3 px, white, alpha 90), fixed random seed;
+  * middle, factor 0.25: 9 dark rack silhouettes standing on the floor (40 to 70 px wide, 120 to
+    300 px high, black alpha 80, with thin light rows every 16 px, white alpha 28) and the faint
+    code tokens ("</>", "{ }", "01", "fn()", "=>"), colour (48,44,80);
+  * near, factor 0.5: 7 thin vertical cables (3 px wide, 150 to 450 px long) hanging from the
+    ceiling, white alpha 26.
+  Build one gradient surface per stage once. While the stage changes, draw the lower stage
+  gradient and the next one on top with alpha = fraction of `stage_blend`.
 - Floor: dark strip, 80 px high, blue top line and moving blue hazard stripes (scroll with pipes).
 - Wording (all in config.py): title "FLAPPY BOB"; score label "Bugs fixed"; game over
   "Build failed!" with hint "Press R to redeploy"; pause "Deployment paused" with hint
-  "Press P to resume"; ready hint "Press SPACE to start"; play hint "Press P to pause".
+  "Press P to resume"; ready hint "Press SPACE to start"; play hint "Press P to pause";
+  stage banner "Stage {number}: {name}" (number = stage index + 1).
 - Colours (Carbon): primary blue (15,98,254), cyan (51,177,255), purple (138,63,252),
   red (250,77,86), text (244,244,244).
 - Layout (window 640 x 720 px): big score number top centre, below it "Bugs fixed   Best N".
@@ -84,6 +94,8 @@ CONCEPT
   `_draw_text`. Every text must fit inside the window with a 24 px margin left and right; if a
   line is wider, scale it down in that helper. Check the longest texts ("Deployment paused",
   "Build failed!" at 48 px bold monospace).
+- Stage banner: while the state's `banner_time` is above 0 (and Playing), show the stage banner in
+  cyan, 28 px, centred at y = 160, through `_draw_text`, after everything else.
 - Controls hint: while Ready and while Playing (not paused, not game over) always show
   "Press P to pause" centred on the floor strip at the bottom, 18 px, so the audience sees it.
 - Effects (the animation state lives in state.py, not in the renderer):
@@ -101,10 +113,15 @@ RULES (use exactly these numbers, put them all in config.py)
   speed 720 px/s. Bob's tilt in degrees = -vy * 0.06, limited to 25 up and 70 down.
 - Ceiling: Bob bumps against it (position clamped to the radius, upward speed set to 0), no death.
 - Death: touching the floor, or the circle overlapping a rack (top or bottom part of a pipe).
-- Pipes: width 84 px, gap 190 px, a new pair every 270 px of horizontal distance, entering at the
-  right edge. Gap centre is random, at least 100 px away from ceiling and floor for the gap edges.
+- Pipes: width 84 px, entering at the right edge. The gap height comes from the current stage
+  (see STAGES) and is stored in each pipe when it spawns (`Pipe.gap`), so pipes already on screen
+  keep their gap; the collision test and the renderer use the pipe's own gap. Gap centre is
+  random, at least 100 px away from ceiling and floor for the gap edges. A new pair spawns when the
+  last pipe is `speed * 1.7` px away from the right edge, so the time between pairs stays 1.7 s.
   Remove pipes that left the screen to the left.
-- Speed: 160 px/s at the start, +3 px/s per point, capped at 260 px/s.
+- Speed depends on play TIME, not on score: `play_time` counts seconds since the first flap
+  (0 before it). speed = 160 + (300 - 160) * (1 - exp(-play_time / 40)) px/s, always below 300.
+  Make it a property of the state; the floor, the pipes and the parallax scroll with it.
 - Score +1 when the right edge of a pair passes Bob's x. Best score is kept in memory for the
   session only (survives restart, no file).
 - State flow: Ready (Bob bobs, nothing moves) -> first flap starts the game -> Playing -> Game over.
@@ -112,9 +129,21 @@ RULES (use exactly these numbers, put them all in config.py)
 - Controls: SPACE or arrow UP = flap. P = pause. R = restart (after game over). No mouse
   control. ESC = quit (already exists in main.py). Events only via KEYDOWN.
 
+STAGES (difficulty and look change with the score; all numbers and tables in config.py)
+- stage = min(score // 10, 3). Names: "Sprint", "Staging", "Production", "Black Friday".
+- Gap height per stage: 190, 176, 163, 150 px.
+- Background gradient (top colour -> bottom colour) per stage: (22,22,22)->(44,26,96);
+  (10,24,56)->(0,60,160); (28,16,56)->(110,45,200); (48,10,16)->(130,24,44).
+- State field `stage_blend` (float) moves towards `stage` by at most 1.2 per second (it never
+  overshoots), so the background changes smoothly. It is updated also in game over.
+- When a passed pair raises the stage: set `banner_time = 1.8` and `shake_time = 0.15` (the
+  existing shake, weaker). `banner_time` counts down in `update`.
+- `restart()` resets play_time, stage_blend and banner_time to 0; best score stays.
+
 ARCHITECTURE (from AGENTS.md, binding)
-- state.py: no pygame import. Bob, pipes, particles, shake time and the world time (for LED
-  blinking) are state. `update(dt)` moves everything. main.py now calls it every frame, so
+- state.py: no pygame import. Bob, pipes, particles, shake time, the world time (for LED
+  blinking), `play_time`, `stage_blend` and `banner_time` are state; `stage`, `pipe_gap` and
+  `pipe_speed` are properties. `update(dt)` moves everything. main.py now calls it every frame, so
   `update` must return early while paused and keep particles and shake running in game over.
   `random` and `math` are fine.
 - renderer.py: draws only, never changes state. Read everything from the state.
@@ -143,7 +172,7 @@ PROCEDURE
    - "Add sound effects: a short blip on flap and a low buzz on game over. Use pygame.mixer and
      generate the tones in code so no files are needed."
    - "Save the best score in a file `.highscore` and show it on start."
-   - "Make a night mode: after 10 points the background gets darker and the racks glow more."
+   - "Add a 'Stage clear' sound: three rising beeps when a new stage starts."
    - "Add a small 'Made with Bob' text at the bottom."
    Keep constants in `config.py` and state in `state.py`.
 
