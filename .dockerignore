@@ -1,0 +1,104 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checking and linting
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
+
+# Documentation (keep essential docs)
+FACILITATOR_GUIDE.md
+AGENTS.md
+!README.md
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Lock files
+uv.lock
+
+# Game specific
+.highscore
+*.save
+
+# Development scripts that aren't needed in container
+scripts/bootstrap.py
+scripts/lint.sh
+
+# Container files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# SDLC folder (not needed in game container)
+sdlc/
