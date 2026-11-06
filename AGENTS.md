@@ -100,16 +100,31 @@ formats or checks your code, write it correctly the first time:
   included) and attribute, with element types on list, dict and tuple.
 - ruff style: lines at most 100 characters, 4-space indent, double quotes, sorted imports
   (standard library, third party, `game.*`), no unused imports or variables.
-- Define every constant in `config.py` first, then write `state.py` and `renderer.py`. Re-check
-  that each `GameConfig.X` you use exists and is spelled identically.
-- When all files are written, re-read them once and fix wrong names, missing constants, types or
-  imports.
+- Define EVERY constant in `config.py` first, complete, in ONE `write_file` call, before writing
+  `state.py` and `renderer.py`. First make an inventory in your plan: go through the spec section
+  by section and list every number, colour, size, offset, count, seed, frequency and text. Easily
+  forgotten: LED blink (phase step, cycle length, thresholds), screen shake (frequencies,
+  amplitude, duration), particle values, parallax factors and seeds, text box values, layout
+  positions. Add none later and leave none unused.
+- Final check by reading the files again, not from memory: list every `GameConfig.X` used in
+  `state.py`, `renderer.py` and `input_handler.py` and compare it name by name with `config.py`.
+  Every used name must be defined, every defined name used. Then fix wrong types and imports.
 
 ## Working efficiently
 
 - **Write each file in ONE `write_file` call and always include `path`.** Use only
   `read_file`, `write_file`, `apply_diff` and `search_and_replace`. Do not invent tools.
   Search strings must not end with a stray newline.
+- **After the first write, fix with small edits, never rewrite a file.** For a one-line change use
+  `search_and_replace` with a single-line search string. For a block use `apply_diff` with the
+  exact `:start_line:` taken from a fresh `read_file`; never guess it (`:start_line: 1` fails).
+  Avoid multi-line `search_and_replace`: it breaks on whitespace.
+- **ONE edit tool call per turn.** Never put two edits on the same file in the same turn: each one
+  reads the file and writes it back, so the second silently overwrites the first, and both report
+  success. Wait for the result, `read_file` to confirm the change is there, then make the next
+  edit. Order: `config.py` first, then the files that use its constants.
+- **Missing constants:** collect ALL of them first and add them in ONE single edit, never one edit
+  per constant.
 - **`.venv` is hidden and already complete.** Do not inspect it or glob for it.
 - Keep the whole game compact, about 700 lines across `game/*.py`.
 

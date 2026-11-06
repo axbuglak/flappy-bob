@@ -54,8 +54,16 @@ AUTONOMY
   tests, no renders or screenshots, and never start the game. You have no way to ask me anything
   and nobody can approve a command, so a command would just block the run. If you want to verify
   something, do it by re-reading the files. I start the game myself.
-- Make config edits one at a time, never in parallel, and grep config.py for every
-  `GameConfig.X` you use before finishing.
+- ONE tool call per turn for every file edit. Never put two edit calls (write_file, apply_diff,
+  search_and_replace) on the same file in the same turn: both read the file and write it back, so
+  the second silently overwrites the first and the tool still reports success. Wait for the
+  result, then `read_file` the file to confirm the change is there, and only then make the
+  next edit. Order: config.py first, then the files that use its constants.
+- After the first write of a file, never rewrite it: fix with small edits. One-line change:
+  `search_and_replace` with a single-line search string. Block: `apply_diff` with the exact
+  `:start_line:` from a fresh `read_file` (never guess it).
+- If a constant is missing in config.py later, collect ALL missing ones first and add them in ONE
+  single edit. Never one edit per constant.
 - Create no images; the artwork is in assets/ and already loaded. Keep it compact (about 700
   lines in total) and add nothing beyond this spec.
 
@@ -64,10 +72,21 @@ CODE QUALITY (nothing checks your code, so get it right the first time)
   attribute; element types on list, dict and tuple.
 - ruff style: lines up to 100 characters, 4 spaces, double quotes, sorted imports (standard
   library, third party, `game.*`), no unused imports or variables.
-- Write config.py first. Every `GameConfig.X` used elsewhere must exist there with the exact same
-  name. No magic numbers in state.py or renderer.py.
-- At the end re-read the four files once and fix wrong names, missing constants, types and
-  imports. The game must not crash on the Ready screen or after restart.
+- Write config.py first and COMPLETE, in ONE write_file call. Before that, do a constant inventory
+  in your plan: go through the spec section by section (TEXT, BACKGROUND, LOOK, RULES, STAGES,
+  Effects) and list every number, colour, size, offset, count, seed, frequency and text. Check
+  these easily forgotten groups: LED blink (phase step, cycle length, on/off thresholds), screen
+  shake (frequencies, amplitude, duration), particle values, parallax factors and seeds, rack and
+  cable sizes, text box values, layout positions. Think through how state.py and renderer.py will
+  use each one. Add none later, leave none unused. Every `GameConfig.X` used elsewhere must exist
+  there with the exact same name. No magic numbers in state.py or renderer.py.
+- FINAL CHECK, by reading the files again, not from memory (a success message from a tool proves
+  nothing): `read_file` config.py, state.py, renderer.py and input_handler.py, write down every
+  `GameConfig.X` name used in the last three, and compare it name by name with the names defined
+  in config.py. Every used name must be defined. Every defined name must be used. Fix any gap
+  with ONE edit, then read the file again to confirm.
+- Then re-read the four files once and fix wrong names, types and imports. The game must not
+  crash on the Ready screen or after restart.
 
 TEXT
 - One helper `_draw_text(text, font, color, center)`: `surf = font.render(text, True, color)`
@@ -199,9 +218,10 @@ ARCHITECTURE (AGENTS.md, binding)
 
 PROCEDURE
 1. Read AGENTS.md, the four files in game/ and main.py.
-2. Write a plan of at most 8 lines and continue at once, without waiting for approval.
-3. Write config.py, state.py, renderer.py, input_handler.py, each in ONE call.
-4. Do the one self-review from CODE QUALITY. Run nothing.
+2. Write a plan of at most 8 lines plus the constant inventory (see CODE QUALITY), and continue at
+   once, without waiting for approval.
+3. Write config.py, state.py, renderer.py, input_handler.py, each in ONE call, one call per turn.
+4. Do the FINAL CHECK from CODE QUALITY (compare the GameConfig names with config.py). Run nothing.
 5. Finish with a 5-line summary, your assumptions and how to play.
 ```
 
