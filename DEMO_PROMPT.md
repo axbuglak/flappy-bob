@@ -12,9 +12,8 @@ only writes game logic, drawing and input. That is what keeps the run short.
 
 ## Checklist BEFORE the stage (tick once)
 
-Prepared state: `.venv` and `uv.lock` exist, the assets are in place, a finished fallback game
-exists in `../flappy-bob-fallback`. Bob runs NO commands in this demo (no scripts, no terminal),
-so the only thing you do is paste the prompt.
+Prepared state: `.venv` and `uv.lock` exist and the assets are in place. Bob runs NO commands in
+this demo (no scripts, no terminal), so the only thing you do is paste the prompt.
 
 - [ ] **Bob auto-approve** (bar above the input field): switch on **Read, Edit, Todo**.
       For safety also **Skill, Subtask, Subagent, Mode**. Leave **Execute** off: Bob must not need
@@ -23,15 +22,15 @@ so the only thing you do is paste the prompt.
 - [ ] Open the folder `flappy-bob/` as the Bob workspace, mode **Agent**.
 - [ ] **Dry run with the real prompt** on a copy of the folder (`cp -R flappy-bob /tmp/flappy-bob-probe`
       and open that). Time it (target: under 5 to 7 minutes), watch for every click, and start the
-      result once with `uv run python main.py` to see that it runs. Each click you need is a missing
-      auto-approve switch; any command Bob tries is a prompt bug.
+      result once with `uv run python main.py`. Check every screen (ready, playing, paused, game
+      over): yellow text on a dark box, drawn above pipes, Bob and the logo, and no two boxes
+      touching. Any command Bob tries is a prompt bug.
 - [ ] **Reset the stage folder after a run** (restores `game/` and `main.py` from the backup
       folder `.starter/` inside this project; assets and docs stay):
   ```bash
   ./scripts/reset.sh
   ```
-- [ ] **Fallback:** the finished game is in `../flappy-bob-fallback`. Start it with
-      `cd ../flappy-bob-fallback && uv run python main.py`. Keep a second terminal window ready.
+- [ ] **Fallback:** keep a finished game ready in a second folder and a second terminal window.
 - [ ] Disconnect other MCP connections or review rules in this session. They can trigger an
       approval question.
 - [ ] Projector test: the window is 640x720 and fits 1080p. Use a large terminal font.
@@ -40,141 +39,170 @@ so the only thing you do is paste the prompt.
 ## The prompt (copy and paste)
 
 ```
-Design and build "Flappy Bob": a Flappy Bird game where the bird is Bob, the IBM Bob mascot with
-the hard hat. Work completely on your own and ask no questions. For open points make sensible
-assumptions and list them at the end in a short list.
+Build "Flappy Bob": Flappy Bird where the bird is Bob, the IBM Bob mascot with the hard hat. Work
+alone and ask no questions. Make sensible assumptions and list them at the end.
 
-IMPORTANT: DO NOT ADD A TEXT BACKGROUND AT ALL. No background, box, panel, fill, outline, shadow or
-glow behind any text, anywhere, ever. Text is bare letters only.
+EVERY TEXT HAS A VISIBLE DARK BOX BEHIND IT: a semi-transparent black box with padding
+(alpha 160), so the text stays readable over the pipes, the logo and the background.
+There must be no other panel, pill, badge, bar, border, outline, shadow or glow around any text.
 
-AUTONOMY (so nobody has to click)
-- Do not activate skills (also no brainstorming), use no MCP tools and no review tools, do not
-  switch modes and do not start subagents.
-- Work only inside this workspace folder. Read and write nothing outside it.
-- Run NO commands at all: no shell, no scripts, no terminal, no installs, no git, no tests, and
-  never start the game. Nothing you do may need an approval. There is no way to run a check, so
-  write the code carefully and review it yourself once at the end (see CODE QUALITY).
-- Download, generate or convert no images. The artwork is already in assets/ and loaded.
-- Time budget: keep the implementation compact (about 700 lines in total, no features beyond this
-  spec).
-- Use only read_file, write_file, apply_diff and search_and_replace, and always pass `path` to
-  write_file. Do not look into `.venv`.
+AUTONOMY
+- No skills, no MCP tools, no review tools, no mode switch, no subagents.
+- Work only inside this workspace. Use only read_file, write_file, apply_diff and
+  search_and_replace; always pass `path` to write_file. Do not look into `.venv`.
+- Run NO commands, not even once: no shell, no terminal, no scripts, no installs, no git, no
+  tests, no renders or screenshots, and never start the game. You have no way to ask me anything
+  and nobody can approve a command, so a command would just block the run. If you want to verify
+  something, do it by re-reading the files. I start the game myself.
+- Make config edits one at a time, never in parallel, and grep config.py for every
+  `GameConfig.X` you use before finishing.
+- Create no images; the artwork is in assets/ and already loaded. Keep it compact (about 700
+  lines in total) and add nothing beyond this spec.
 
-CODE QUALITY (nothing will format or check your code, so get it right the first time)
-- Python 3.11+, fully type-annotated for mypy strict: annotate every function parameter, return
-  type (`-> None` included) and attribute; give list, dict and tuple types their element types.
-- ruff style: lines at most 100 characters, 4-space indent, double quotes, imports sorted (standard
-  library, blank line, third party, blank line, `game.*`), no unused imports or variables.
-- Define EVERY `GameConfig.X` constant in config.py before using it elsewhere, and spell it
-  identically everywhere. No magic numbers in state.py or renderer.py.
-- When all four files are written, re-read them once, fix any wrong name, missing constant, type
-  or import, and make sure the game cannot crash at start (Ready screen) or on restart.
+CODE QUALITY (nothing checks your code, so get it right the first time)
+- Python 3.11+, fully typed for mypy strict: every parameter, return type (`-> None` too) and
+  attribute; element types on list, dict and tuple.
+- ruff style: lines up to 100 characters, 4 spaces, double quotes, sorted imports (standard
+  library, third party, `game.*`), no unused imports or variables.
+- Write config.py first. Every `GameConfig.X` used elsewhere must exist there with the exact same
+  name. No magic numbers in state.py or renderer.py.
+- At the end re-read the four files once and fix wrong names, missing constants, types and
+  imports. The game must not crash on the Ready screen or after restart.
 
-CONCEPT
-- Player = Bob. Use `self.sprite_bob` from Renderer.__init__ (assets/bob.png, already loaded,
-  64x61 px). Tilt it with pygame.transform.rotate: nose up while rising, down while falling.
-- Pipes = server racks: dark body with a blue edge, rows of small rack units with a LED each that
-  blinks (green / dark green, driven by the state's time), and a blue lip at the gap end.
-- Background: a vertical gradient per stage (see STAGES) plus 3 parallax layers on top, each built
-  ONCE in the renderer as a transparent surface twice the window width (paint everything at x and
-  x + 640 so it scrolls seamlessly; offset = scroll * factor % 640):
-  * far, factor 0.08: 40 tiny stars (1 to 3 px, white, alpha 90), fixed random seed;
-  * middle, factor 0.25: 9 dark rack silhouettes standing on the floor (40 to 70 px wide, 120 to
-    300 px high, black alpha 80, with thin light rows every 16 px, white alpha 28) and the faint
-    code tokens ("</>", "{ }", "01", "fn()", "=>"), colour (48,44,80);
-  * near, factor 0.5: 7 thin vertical cables (3 px wide, 150 to 450 px long) hanging from the
-    ceiling, white alpha 26.
-  Build one gradient surface per stage once. While the stage changes, draw the lower stage
-  gradient and the next one on top with alpha = fraction of `stage_blend`.
-- Floor: dark strip, 80 px high, blue top line and moving blue hazard stripes (scroll with pipes).
-- Wording (all in config.py): title "FLAPPY BOB"; score label "Bugs fixed"; game over
-  "Build failed!" with hint "Press R to redeploy"; pause "Deployment paused" with hint
-  "Press P to resume"; ready hint "Press SPACE to start"; play hint "Press P to pause";
-  stage banner "Stage {number}: {name}" (number = stage index + 1).
-- Colours (Carbon): primary blue (15,98,254), cyan (51,177,255), purple (138,63,252),
-  red (250,77,86), text (244,244,244).
-- Layout (window 640 x 720 px): big score number top centre, below it "Bugs fixed   Best N".
-  Ready screen: title in cyan, the full mascot `self.sprite_logo` (assets/logo.png, 155x240) in
-  the middle, the ready hint below it. Overlays for pause and game over: one dark translucent layer
-  over the WHOLE window (full width and height), nothing else.
-- TEXT HAS NO BACKGROUND (strict)
+TEXT
+- One helper `_draw_text(text, font, color, center)`: `surf = font.render(text, True, color)`
+  (exactly these three arguments, never a background colour). Shrink it with smoothscale if it is
+  wider than 640 - 2 * 24 px. Then draw the box:
+  `box = pygame.Surface((w + 2 * pad, h + 2 * pad), pygame.SRCALPHA)`, fill it with
+  `GameConfig.TEXT_BOX_COLOR` and `GameConfig.TEXT_BOX_ALPHA`, blit it at the text rect inflated
+  by the padding, then blit the text on top. All texts use it: score, "Bugs fixed   Best N" line,
+  title, hints, banner, overlay titles.
+- config.py: `TEXT_BOX_COLOR = (0, 0, 0)`, `TEXT_BOX_ALPHA = 160`, `TEXT_BOX_PADDING = 8`.
+  Never hard-code these in renderer.py. The box is the only allowed backing behind text.
+- Z-ORDER: draw all text last, directly on the screen, after the scene, the screen shake and
+  the pause/game-over dim layer. Text is therefore above pipes, Bob, the logo, particles and
+  the dim layer. Never draw text into the off-screen scene surface.
+- Colours: score, "Bugs fixed   Best N" line and all hints yellow (241,194,27), stored as
+  `COLOR_TEXT`. Title, stage banner and pause title cyan (51,177,255). Game-over title red
+  (250,77,86).
+- Without running anything, check from the numbers in config.py that on the Ready screen no two
+  text boxes touch (including the padding). Increase the vertical gaps in config.py if they do.
 
-  Never draw a rectangle, panel, box, pill, badge, bar, white or coloured fill, border, outline,
-  shadow or glow behind or around any text. Never pass a background colour to `font.render`
-  (always `font.render(text, True, color)` with exactly these three arguments). The only layer
-  that may sit behind text is the full-window dark layer of the pause and game-over screens.
-- TEXT MUST ALWAYS BE READABLE: draw ALL text last, after the world, the sprites, the logo and the
-  dark layer, so nothing covers it and the dark layer does not dim it. Draw every text through one
-  helper `_draw_text` (anti-aliased, in its colour, blitted as it is). Every text must fit inside
-  the window with a 24 px margin left and right; if a line is wider, scale it down in that helper.
-  Check the longest texts ("Deployment paused", "Build failed!" at 48 px bold monospace).
-- Stage banner: while the state's `banner_time` is above 0 (and Playing), show the stage banner in
-  cyan, 28 px, centred at y = 160, through `_draw_text`, after everything else.
-- Controls hint: while Ready and while Playing (not paused, not game over) always show
-  "Press P to pause" centred on the floor strip at the bottom, 18 px, so the audience sees it.
-- Effects (the animation state lives in state.py, not in the renderer):
-  * On death: 28 small square particles fly out of Bob (random direction, speed 80 to 280 px/s,
-    gravity 600 px/s^2, life 0.8 s, shrinking, alternating cyan and purple).
-  * On death: screen shake for 0.35 s, strength 8 px fading to 0. The renderer draws the world to
-    an off-screen surface and blits it with the shake offset from the state.
-  * On the ready screen Bob bobs up and down (amplitude 10 px, 3 rad/s) around the vertical middle
-    of the playfield.
+BACKGROUND (never empty: it must show clear detail on EVERY screen)
+- The background is NEVER a flat or empty colour. Ready, Playing, Paused and Game over all draw the
+  full background first, every frame: gradient, then the 3 layers, then everything else. Pause and
+  game over only add the dark layer on top of it.
+- Gradient: one vertical gradient per stage (see STAGES), covering the whole window (build once).
+  While the stage changes, draw the lower stage gradient and the next one on top with
+  alpha = fractional part of `stage_blend`.
+- 3 parallax layers on top of the gradient. Build each ONCE in the renderer as
+  `pygame.Surface((1280, 720), pygame.SRCALPHA)` (the SRCALPHA flag is mandatory, otherwise the
+  layer covers the gradient), paint every item at x and x + 640 so it scrolls seamlessly, and blit it
+  at x = -(scroll * factor % 640). Detail must be clearly visible, not just faintly. Draw ALL of it
+  in code with `pygame.draw` and `font.render`; load no image or SVG file for the background (the
+  files in assets/source/ are off limits). Use fixed random seeds, so the picture is the same every
+  run:
+  * far, factor 0.08: 50 stars (1 to 3 px, white, alpha 120) spread over the whole playfield, and a
+    faint circuit grid: horizontal and vertical lines every 80 px, colour (255,255,255) alpha 14;
+  * middle, factor 0.25: 9 rack silhouettes standing on the floor line (40 to 70 px wide, 120 to
+    300 px high, black alpha 90), spread evenly over the width so there are no big gaps. Each has a
+    thin light row every 16 px (white alpha 36) and 3 to 6 tiny status LEDs (3 px squares, green
+    (66,190,101) or cyan (51,177,255), alpha 160) at random rows. Plus 12 code tokens ("</>",
+    "{ }", "01", "fn()", "=>", "git", "#!") in (64,60,110), 18 px, spread over the sky above the
+    racks (y from 40 to 320) without overlapping each other;
+  * near, factor 0.5: 7 vertical cables (3 px wide, 150 to 450 px long) from the ceiling, white
+    alpha 32, each ending in a small connector: a 9 x 6 px rectangle, cyan alpha 90.
+- The background scrolls with `scroll` while Playing. On the Ready screen it is shown standing
+  still (scroll = 0) and fully drawn. Never skip or hide a layer on any screen.
+- The only fill of the whole window is the gradient. Do not fill with a plain colour after it.
 
-RULES (use exactly these numbers, put them all in config.py)
-- Playfield height = 720 - 80 (floor). Bob stays at x = 120. Collision shape for Bob: circle,
-  radius 20 px.
-- Gravity 1500 px/s^2. Flap sets the vertical speed to -460 px/s (not an addition). Maximum fall
-  speed 720 px/s. Bob's tilt in degrees = -vy * 0.06, limited to 25 up and 70 down.
-- Ceiling: Bob bumps against it (position clamped to the radius, upward speed set to 0), no death.
+LOOK
+- Player: `self.sprite_bob` (assets/bob.png, 64x61, already loaded), rotated as a copy each frame:
+  nose up while rising, down while falling.
+- Pipes = server racks: dark body, blue edge, rows of rack units with a blinking LED each (green /
+  dark green, driven by the state's time) and a blue lip at the gap end.
+- Floor: dark strip, 80 px high, blue top line, moving blue hazard stripes (scroll with the pipes).
+- Colours (Carbon): blue (15,98,254), cyan (51,177,255), purple (138,63,252), red (250,77,86).
+- Fonts (monospace): score 64 px bold; title and overlay titles 48 px bold; banner 28 px bold;
+  all other texts 18 px.
+- Layout (640 x 720): big score top centre, below it "Bugs fixed   Best N". Controls hint
+  "Press P to pause" (18 px) centred on the floor strip while Ready and Playing.
+- Ready screen: the normal scene (background, floor, bobbing Bob) with the title in cyan, the full
+  mascot `self.sprite_logo` (assets/logo.png, 155x240) and the ready hint. No overlay, no dimming.
+  No pipes on this screen. NOTHING MAY OVERLAP: use exactly this layout, with every position in
+  config.py, so each item has its own free band (centres; all items centred at x = 320 except Bob):
+  * score number y = 56 (about 18 to 94) and "Bugs fixed   Best N" y = 130 (about 120 to 140);
+  * title "FLAPPY BOB" y = 200 (about 170 to 230);
+  * Bob on the left at x = 120, bobbing around y = 320 (y about 280 to 361, x from 88 to 152): he
+    must not touch the logo or any text;
+  * logo `self.sprite_logo` at y = 400 (280 to 520), x from 242 to 398;
+  * ready hint "Press SPACE to start" y = 570 (about 560 to 580);
+  * controls hint "Press P to pause" y = 680 on the floor strip.
+  The text boxes (text plus 8 px padding on every side) count as part of these rectangles: no two
+  boxes may overlap or touch. While Playing, texts may sit over pipes, but two texts or a text and
+  the logo must never overlap.
+- Pause and game over: draw the scene, then ONE translucent black layer over the whole window
+  (alpha 160), then the texts. The title ("Deployment paused" / "Build failed!") at y = 300 and its
+  hint at y = 370, below the score lines (y = 56 and 130), so no text overlaps another.
+- Stage banner: while `banner_time` > 0 and Playing, "Stage {number}: {name}" (number = stage + 1),
+  28 px, centred at y = 200 (below the score lines, so the boxes do not touch).
+- Texts (config.py): "FLAPPY BOB"; "Bugs fixed"; "Build failed!" / "Press R to redeploy";
+  "Deployment paused" / "Press P to resume"; "Press SPACE to start"; "Press P to pause".
+  The longest ("Deployment paused", "Build failed!" at 48 px bold monospace) must fit the window.
+- Effects (animation state lives in state.py, not in the renderer):
+  * Death: 28 small square particles from Bob (random direction, 80 to 280 px/s, gravity
+    600 px/s^2, life 0.8 s, shrinking, alternating cyan and purple).
+  * Death: screen shake 0.35 s, 8 px, fading to 0. Draw the scene to an off-screen surface and
+    blit it with the state's shake offset (the text layer is drawn on the screen afterwards).
+  * Ready: Bob bobs up and down (amplitude 10 px, 3 rad/s) around y = 320 (see Ready screen).
+
+RULES (exactly these numbers, all in config.py)
+- Playfield height = 720 - 80 (floor). Bob at x = 120, collision circle radius 20 px.
+- Gravity 1500 px/s^2. Flap sets vy to -460 px/s (not added). Max fall speed 720 px/s. Tilt in
+  degrees = -vy * 0.06, limited to 25 up and 70 down.
+- Ceiling: clamp Bob to the radius and set upward speed to 0. No death.
 - Death: touching the floor, or the circle overlapping a rack (top or bottom part of a pipe).
-- Pipes: width 84 px, entering at the right edge. The gap height comes from the current stage
-  (see STAGES) and is stored in each pipe when it spawns (`Pipe.gap`), so pipes already on screen
-  keep their gap; the collision test and the renderer use the pipe's own gap. Gap centre is
-  random, at least 100 px away from ceiling and floor for the gap edges. A new pair spawns when the
-  last pipe is `speed * 1.7` px away from the right edge, so the time between pairs stays 1.7 s.
-  Remove pipes that left the screen to the left.
-- Speed depends on play TIME, not on score: `play_time` counts seconds since the first flap
-  (0 before it). speed = 160 + (300 - 160) * (1 - exp(-play_time / 40)) px/s, always below 300.
-  Make it a property of the state; the floor, the pipes and the parallax scroll with it.
-- Score +1 when the right edge of a pair passes Bob's x. Best score is kept in memory for the
-  session only (survives restart, no file).
-- State flow: Ready (Bob bobs, nothing moves) -> first flap starts the game -> Playing -> Game over.
-  Pause with P (not during game over). Restart with R, only after game over.
-- Controls: SPACE or arrow UP = flap. P = pause. R = restart (after game over). No mouse
-  control. ESC = quit (already exists in main.py). Events only via KEYDOWN.
+- Pipes: width 84 px, enter at the right edge, removed when fully left of the screen. Each pipe
+  stores its own gap height (`Pipe.gap`, taken from the current stage when it spawns); collision
+  and drawing use that value. Gap centre random, gap edges at least 100 px from ceiling and floor.
+  A new pair spawns when the last pipe is `speed * 1.7` px from the right edge (constant 1.7 s).
+- Speed depends on play TIME, not score. `play_time` counts seconds since the first flap.
+  speed = 160 + (300 - 160) * (1 - exp(-play_time / 40)) px/s, always below 300. State property;
+  floor, pipes and parallax scroll with it.
+- Score +1 when the right edge of a pair passes Bob's x. Best score stays in memory for the
+  session (survives restart, no file).
+- Flow: Ready (Bob bobs, nothing moves) -> first flap starts -> Playing -> Game over.
+  Pause with P (not in game over). Restart with R (only in game over).
+- Controls: SPACE or UP = flap, P, R. ESC already works. No mouse. Events only via KEYDOWN.
 
-STAGES (difficulty and look change with the score; all numbers and tables in config.py)
-- stage = min(score // 10, 3). Names: "Sprint", "Staging", "Production", "Black Friday".
-- Gap height per stage: 190, 176, 163, 150 px.
-- Background gradient (top colour -> bottom colour) per stage: (22,22,22)->(44,26,96);
-  (10,24,56)->(0,60,160); (28,16,56)->(110,45,200); (48,10,16)->(130,24,44).
-- State field `stage_blend` (float) moves towards `stage` by at most 1.2 per second (it never
-  overshoots), so the background changes smoothly. It is updated also in game over.
-- When a passed pair raises the stage: set `banner_time = 1.8` and `shake_time = 0.15` (the
-  existing shake, weaker). `banner_time` counts down in `update`.
+STAGES (all numbers and tables in config.py)
+- stage = min(score // 10, 3). Names "Sprint", "Staging", "Production", "Black Friday".
+- Gap height per stage 190, 176, 163, 150 px.
+- Sky gradient (top -> bottom) per stage: (22,22,22)->(44,26,96); (10,24,56)->(0,60,160);
+  (28,16,56)->(110,45,200); (48,10,16)->(130,24,44).
+- `stage_blend` (float) moves towards `stage` by at most 1.2 per second, never overshooting, also
+  in game over.
+- When a passed pair raises the stage: `banner_time = 1.8` and `shake_time = 0.15` (the same
+  shake, weaker). `banner_time` counts down in `update`.
 - `restart()` resets play_time, stage_blend and banner_time to 0; best score stays.
 
-ARCHITECTURE (from AGENTS.md, binding)
-- state.py: no pygame import. Bob, pipes, particles, shake time, the world time (for LED
-  blinking), `play_time`, `stage_blend` and `banner_time` are state; `stage`, `pipe_gap` and
-  `pipe_speed` are properties. `update(dt)` moves everything. main.py now calls it every frame, so
-  `update` must return early while paused and keep particles and shake running in game over.
-  `random` and `math` are fine.
-- renderer.py: draws only, never changes state. Read everything from the state.
-- config.py: all numbers, colours, sizes and texts. Keep the existing sprite entries.
-- input_handler.py: the only place for pygame events. It only calls GameState methods
-  (e.g. `flap()`, `restart()`) and toggles `paused`.
-- GameState must keep `score`, `game_over`, `paused`, `restart()`. Remove `level` and `lives`.
-- main.py needs no change (window size, title and keyboard focus on the game window are done).
+ARCHITECTURE (AGENTS.md, binding)
+- state.py: no pygame import. Holds Bob, pipes, particles, shake time, world time (LED blink),
+  `play_time`, `stage_blend`, `banner_time`; `stage`, `pipe_gap`, `pipe_speed` are properties.
+  `update(dt)` returns early while paused and keeps particles, shake and `stage_blend` running in
+  game over. `random` and `math` are fine.
+- renderer.py: draws only, never changes state. config.py: every number, colour, size and text;
+  keep the sprite entries. input_handler.py: the only place for pygame events; it calls GameState
+  methods (`flap()`, `restart()`) and toggles `paused`.
+- GameState keeps `score`, `game_over`, `paused`, `restart()`; remove `level` and `lives`.
+  main.py needs no change.
 
 PROCEDURE
-1. First read AGENTS.md and all four files in game/ plus main.py.
-2. Write a short plan (maximum 8 lines), then continue immediately, without waiting for approval.
-3. Order: config.py, state.py, renderer.py, input_handler.py. Define EVERY constant that state.py
-   and renderer.py use in config.py first (e.g. MAX_DT), and write each file in one call.
-4. Run no commands. When all four files are written, do the one self-review from CODE QUALITY.
-5. FINISH with 5 lines of summary, your assumptions, and how to play. Do not start the game, I
-   start it myself.
+1. Read AGENTS.md, the four files in game/ and main.py.
+2. Write a plan of at most 8 lines and continue at once, without waiting for approval.
+3. Write config.py, state.py, renderer.py, input_handler.py, each in ONE call.
+4. Do the one self-review from CODE QUALITY. Run nothing.
+5. Finish with a 5-line summary, your assumptions and how to play.
 ```
 
 ## After the run (live)
@@ -195,6 +223,6 @@ PROCEDURE
   `AGENTS.md` (logic separated from drawing: that is why particles and shake live in the state, not
   in the renderer) and point out that the Bob artwork was prepared in advance.
 - The prompt is long and unambiguous on purpose. It prevents questions that would break the flow.
-- If time is short, shorten the RULES block and keep CONCEPT, AUTONOMY and ARCHITECTURE.
+- If time is short, shorten the RULES block and keep LOOK, AUTONOMY and ARCHITECTURE.
 - Do not use `scripts/run.sh` (the container needs XQuartz). `uv run python main.py` is more stable.
 - If anything goes wrong on stage: say "and here is one I prepared earlier" and start the fallback.

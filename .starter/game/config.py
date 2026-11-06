@@ -17,12 +17,16 @@ class _GameConfig:
     SCREEN_HEIGHT: int = 720
     FPS: int = 60
 
-    # Colors  (R, G, B)
-    COLOR_BG: tuple[int, int, int] = (15, 15, 25)
-    COLOR_PRIMARY: tuple[int, int, int] = (80, 200, 255)
-    COLOR_ACCENT: tuple[int, int, int] = (255, 80, 120)
-    COLOR_TEXT: tuple[int, int, int] = (230, 230, 230)
-    COLOR_GRID: tuple[int, int, int] = (30, 30, 50)
+    # Colors  (R, G, B) — IBM Carbon.
+    COLOR_BG: tuple[int, int, int] = (22, 22, 22)
+    COLOR_PRIMARY: tuple[int, int, int] = (15, 98, 254)
+    COLOR_ACCENT: tuple[int, int, int] = (250, 77, 86)
+    COLOR_TEXT: tuple[int, int, int] = (241, 194, 27)  # yellow: score, lines, hints
+
+    # Text box: the only allowed backing behind text (no outline, shadow or glow).
+    TEXT_BOX_COLOR: tuple[int, int, int] = (0, 0, 0)
+    TEXT_BOX_ALPHA: int = 160
+    TEXT_BOX_PADDING: int = 8
 
     # Assets (official IBM Bob artwork, see assets/README.md). Already prepared: do not
     # download or generate images. Renderer loads these through Renderer._load_sprite().
@@ -31,10 +35,7 @@ class _GameConfig:
     SPRITE_LOGO: str = str(_ASSET_DIR / "logo.png")  # full mascot, transparent
     SPRITE_LOGO_SIZE: tuple[int, int] = (155, 240)
 
-    # Game-specific constants — IBM Bob will add more here
-    # Example: GRAVITY: float = 1500.0
-    # Example: PIPE_GAP: int = 190
-    # Example: PIPE_SPEED_START: float = 160.0
+    # Game-specific constants — IBM Bob will add more here (physics, pipes, stages, texts)
 
 
 GameConfig = _GameConfig()

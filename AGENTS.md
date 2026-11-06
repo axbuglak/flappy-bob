@@ -51,9 +51,22 @@ flappy-bob/
   particles, screen-shake time, message text with remaining time. `renderer.py` only reads
   this state and draws it. It changes nothing.
 - All numbers, colours, text constants and sizes live in `config.py`.
-- Text has NO background: draw it as bare letters with `font.render(text, True, color)` (three
-  arguments, never a background colour). No box, panel, fill, border, outline, shadow or glow
-  behind any text. Only the pause and game-over screens may dim the whole window.
+- The background is never empty: on EVERY screen (Ready, Playing, Paused, Game over) draw the
+  gradient and all three parallax layers first (layers are `pygame.SRCALPHA` surfaces). Do not
+  skip a layer or fill the window with a plain colour afterwards. Its details (stars, grid, rack
+  silhouettes with LEDs, code tokens like `fn()`, cables) are drawn in code, never loaded from
+  image or SVG files.
+- Nothing overlaps on the Ready screen: score, title, Bob, logo and hints each get their own band
+  with fixed positions in `config.py`. Two texts, or a text and the logo, never overlap.
+- Every text gets a visible semi-transparent black box behind it, with padding
+  (`TEXT_BOX_COLOR = (0, 0, 0)`, `TEXT_BOX_ALPHA = 160`, `TEXT_BOX_PADDING = 8` in `config.py`), so
+  the text is readable on a dark box. Render the text with `font.render(text, True, color)` (three
+  arguments, never a background colour); draw the box on a `pygame.SRCALPHA` surface first, then
+  the text on top. The box is the only allowed backing: no other panel, pill, border, outline,
+  shadow or glow behind any text. Only the pause and game-over screens may dim the whole window.
+- Z-order: all text is drawn last, directly on the screen, after the scene, the screen shake and
+  the dim layer, so it is above pipes, Bob, the logo and particles. Never draw text into the
+  off-screen scene surface. Text box rectangles (with padding) must not overlap or touch.
 - Only `input_handler.py` reads pygame events and the keyboard. It calls methods of `GameState`.
 - `main.py` calls `state.update(dt)` every frame. `GameState.update` must therefore return
   early while `paused`, and keep animating effects (particles, shake) while `game_over`.
@@ -77,10 +90,11 @@ flappy-bob/
 
 ## No commands (important)
 
-**Run no commands at all**: no shell, no scripts, no tests, no installs, no git, and never start
-the game (`uv run python main.py` opens a window and never returns). The human starts the game.
-Nothing may ask for an approval. Since nothing formats or checks your code, write it correctly the
-first time:
+**Run no commands at all, not even once**: no shell, no terminal, no scripts, no tests, no renders
+or screenshots, no installs, no git, and never start the game (`uv run python main.py` opens a
+window and never returns). The human starts the game. There is nobody to ask and nobody to approve
+a command, so a command only blocks the run. To verify something, re-read the files. Since nothing
+formats or checks your code, write it correctly the first time:
 
 - Fully type-annotated Python 3.11+ (mypy strict): every parameter, return type (`-> None`
   included) and attribute, with element types on list, dict and tuple.
