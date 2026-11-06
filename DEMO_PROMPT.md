@@ -54,11 +54,13 @@ AUTONOMY
   tests, no renders or screenshots, and never start the game. You have no way to ask me anything
   and nobody can approve a command, so a command would just block the run. If you want to verify
   something, do it by re-reading the files. I start the game myself.
-- ONE tool call per turn for every file edit. Never put two edit calls (write_file, apply_diff,
+- At most ONE edit call per FILE per turn. Never put two edit calls (write_file, apply_diff,
   search_and_replace) on the same file in the same turn: both read the file and write it back, so
   the second silently overwrites the first and the tool still reports success. Wait for the
-  result, then `read_file` the file to confirm the change is there, and only then make the
-  next edit. Order: config.py first, then the files that use its constants.
+  result, then `read_file` the file to confirm the change is there, and only then make the next
+  edit to that file. Edits to DIFFERENT files are independent and may share one turn, once
+  config.py exists: write state.py, renderer.py and input_handler.py together in one turn.
+  Write config.py alone first, in its own turn.
 - After the first write of a file, never rewrite it: fix with small edits. One-line change:
   `search_and_replace` with a single-line search string. Block: `apply_diff` with the exact
   `:start_line:` from a fresh `read_file` (never guess it).
@@ -220,7 +222,8 @@ PROCEDURE
 1. Read AGENTS.md, the four files in game/ and main.py.
 2. Write a plan of at most 8 lines plus the constant inventory (see CODE QUALITY), and continue at
    once, without waiting for approval.
-3. Write config.py, state.py, renderer.py, input_handler.py, each in ONE call, one call per turn.
+3. Write config.py alone in the first turn. Then write state.py, renderer.py and input_handler.py
+   in one turn, each in ONE call.
 4. Do the FINAL CHECK from CODE QUALITY (compare the GameConfig names with config.py). Run nothing.
 5. Finish with a 5-line summary, your assumptions and how to play.
 ```

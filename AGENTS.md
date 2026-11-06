@@ -119,10 +119,12 @@ formats or checks your code, write it correctly the first time:
   `search_and_replace` with a single-line search string. For a block use `apply_diff` with the
   exact `:start_line:` taken from a fresh `read_file`; never guess it (`:start_line: 1` fails).
   Avoid multi-line `search_and_replace`: it breaks on whitespace.
-- **ONE edit tool call per turn.** Never put two edits on the same file in the same turn: each one
-  reads the file and writes it back, so the second silently overwrites the first, and both report
-  success. Wait for the result, `read_file` to confirm the change is there, then make the next
-  edit. Order: `config.py` first, then the files that use its constants.
+- **At most ONE edit call per file per turn.** Never put two edits on the same file in the same
+  turn: each one reads the file and writes it back, so the second silently overwrites the first,
+  and both report success. Wait for the result, `read_file` to confirm the change is there, then
+  make the next edit to that file. Edits to different files are independent and may share one
+  turn: write `config.py` alone first, then `state.py`, `renderer.py` and `input_handler.py`
+  together in one turn.
 - **Missing constants:** collect ALL of them first and add them in ONE single edit, never one edit
   per constant.
 - **`.venv` is hidden and already complete.** Do not inspect it or glob for it.
